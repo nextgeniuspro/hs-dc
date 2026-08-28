@@ -5,26 +5,15 @@ Sega Dreamcast. Internal port name: **blackbeard**.
 
 <table>
   <tr>
-    <td width="50%"><img src="screenshots/dc-1.png" width="100%" alt="Battle on the Dreamcast: the Attack / Wait / Cancel action menu over the tile map"></td>
-    <td width="50%"><img src="screenshots/dc-2.png" width="100%" alt="Battle on the Dreamcast: movement range and an attack on a fort"></td>
+    <td width="50%"><img src="screenshots/dc-1.png" width="100%"></td>
+    <td width="50%"><img src="screenshots/dc-2.png" width="100%"></td>
   </tr>
   <tr>
-    <td align="center"><sub>The action menu, mid-battle</sub></td>
-    <td align="center"><sub>Movement range and the run at a fort</sub></td>
+    <td width="50%"><img src="screenshots/dc-3.png" width="100%"></td>
+    <td width="50%"><img src="screenshots/dc-4.png" width="100%"></td>
   </tr>
   <tr>
-    <td width="50%"><img src="screenshots/dc-3.png" width="100%" alt="The cutaway ship fight: Wilhelm's fleet against Croco Greg's"></td>
-    <td width="50%"><img src="screenshots/dc-4.png" width="100%" alt="At sea with the commander panel and a unit's stats"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>The cutaway fight between two fleets</sub></td>
-    <td align="center"><sub>At sea, commander and unit panels up</sub></td>
-  </tr>
-  <tr>
-    <td colspan="2"><img src="screenshots/n-gage-qd.png" width="100%" alt="The desktop build showing the main menu inside the N-Gage QD device frame"></td>
-  </tr>
-  <tr>
-    <td colspan="2" align="center"><sub>The desktop build in the N-Gage QD frame — see <a href="#the-device-frame">The device frame</a></sub></td>
+    <td colspan="2"><img src="screenshots/n-gage-qd.png" width="100%"></td>
   </tr>
 </table>
 
