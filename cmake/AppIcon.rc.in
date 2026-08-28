@@ -1,0 +1,13 @@
+// The Windows application icon.
+//
+// Windows takes an executable's icon from its resources rather than from a
+// file beside it, so unlike every other asset this port ships, the icon has to
+// be compiled *in*. This is the whole resource script: one line that matters,
+// and CMake configures the path into it because a .rc resolves relative names
+// against wherever the resource compiler happened to be run from.
+//
+// The first icon in the table, by name order, is the one Explorer and the
+// taskbar use -- hence the conventional IDI_ICON1, which sorts first and is
+// what every other Windows program calls it too. The .ico itself carries every
+// size from 16 to 256 (scripts/mkicon.py); Windows picks whichever it wants.
+IDI_ICON1 ICON "@BB_ICON_ICO@"

@@ -5,7 +5,10 @@
 // through, this opens a window and calls RunGame() directly. Everything after
 // that point is the ported game.
 //
-//   blackbeard <data.pak>                    play the boot flow
+//   blackbeard                               play the boot flow
+//   blackbeard <data.pak>                    ...from a pak somewhere else
+//   blackbeard --import <data.pak>           take a copy and print where it
+//                                            went; no window, no game
 //   blackbeard <data.pak> --texture <path>   single-texture viewer (Left/Right)
 //   blackbeard <data.pak> --cutscene <name>  play one cutscene, e.g. 01-Intro
 //   blackbeard <data.pak> --battle <name>    play one battle, e.g. SP1
@@ -16,6 +19,11 @@
 //                                            window is 16:9 around it
 //   blackbeard <data.pak> --window WxH       an explicit window size instead
 //   blackbeard <data.pak> --verbose          log every asset, bank and screen
+//
+// The pak is optional and usually left off: a build that has been run before
+// has a copy of its own, and one that has not asks for it (ImportScreen.h).
+// Naming one on the command line is for playing a second copy without
+// importing it -- which is what every flag above is really for too.
 //
 // The window is resizable and F11 (or Alt+Enter) makes it fullscreen. The
 // screen keeps its 176x208 shape whatever the window does; the space either
@@ -54,6 +62,8 @@
 #include "game/Settings.h"
 #include "game/Water.h"
 #include "game/TextureCache.h"
+#include "platform/DataFiles.h"
+#include "platform/ImportScreen.h"
 #include "platform/SdlHost.h"
 #include "shim/Log.h"
 #include "shim/Resources.h"
@@ -76,10 +86,10 @@ void ParseSize(const char* s, int& w, int& h) {
 }
 
 // The directory part of a path, or "." if there is none.
-std::string DirOf(const char* path) {
-    const std::string p = path ? path : "";
-    const std::size_t slash = p.find_last_of("/\\");
-    return slash == std::string::npos ? std::string(".") : p.substr(0, slash);
+std::string DirOf(const std::string& path) {
+    const std::size_t slash = path.find_last_of("/\\");
+    return slash == std::string::npos ? std::string(".")
+                                      : path.substr(0, slash);
 }
 
 // Where a port asset -- the soft-key icons, the device frame art -- might be.
@@ -96,7 +106,7 @@ std::string DirOf(const char* path) {
 // that is not found is not an error (see OpenFrames), so it failed silently,
 // taking the settings screen's Frame row with it.
 std::vector<std::string> AssetPaths(const std::string& name, const char* envVar,
-                                    const char* pakPath) {
+                                    const std::string& pakPath) {
     std::vector<std::string> out;
     if (const char* env = std::getenv(envVar)) out.push_back(env);
     out.push_back(DirOf(pakPath) + "/" + name);
@@ -185,17 +195,16 @@ void ViewCutscene(bb::SdlHost& host, bb::FilePack& pack,
     bb::PlayCutscene(host, pack, textures, strings, font, name, &sound);
 }
 
+const char* const kUsage =
+    "usage: blackbeard [data.pak] [--import <data.pak>] [--texture <asset.tc>] "
+    "[--cutscene <name>] [--battle <mission>] [--fight <spec>] [--menu] "
+    "[--travel] [--scale N] [--window WxH] [--verbose]\n";
+
 }  // namespace
 
 int main(int argc, char** argv) {
-    if (argc < 2) {
-        bb::LogError(
-            "usage: blackbeard <data.pak> [--texture <asset.tc>] "
-            "[--cutscene <name>] [--battle <mission>] [--fight <spec>] "
-            "[--menu] [--travel] [--scale N] [--verbose]\n");
-        return 2;
-    }
-
+    std::string pakArg;
+    std::string importPath;
     std::string texturePath;
     std::string cutscene;
     std::string battle;
@@ -205,8 +214,20 @@ int main(int argc, char** argv) {
     bool travel = false;
     int scale = 3;
     int winW = 0, winH = 0;
-    for (int i = 2; i < argc; ++i) {
-        if (!std::strcmp(argv[i], "--texture") && i + 1 < argc)
+    // The pak is the one argument with no flag in front of it, and it is
+    // optional: a build that has been run before already has a copy of its
+    // own (platform/DataFiles.h).
+    for (int i = 1; i < argc; ++i) {
+        if (argv[i][0] != '-') {
+            if (pakArg.empty()) pakArg = argv[i];
+            else bb::LogError("ignoring extra argument: %s\n", argv[i]);
+        } else if (!std::strcmp(argv[i], "--help") ||
+                   !std::strcmp(argv[i], "-h")) {
+            std::printf("%s", kUsage);
+            return 0;
+        } else if (!std::strcmp(argv[i], "--import") && i + 1 < argc)
+            importPath = argv[++i];
+        else if (!std::strcmp(argv[i], "--texture") && i + 1 < argc)
             texturePath = argv[++i];
         else if (!std::strcmp(argv[i], "--cutscene") && i + 1 < argc)
             cutscene = argv[++i];
@@ -244,17 +265,103 @@ int main(int argc, char** argv) {
     if (scale < 1) scale = 1;
     if (const char* env = std::getenv("BB_WINDOW")) ParseSize(env, winW, winH);
 
+    // `--import <data.pak>`: what the import screen does, without the screen.
+    // For a script that is setting a machine up rather than a player sitting
+    // at one -- and it is how the copy itself is tested, since a drag onto a
+    // window is not something a test can perform.
+    if (!importPath.empty()) {
+        if (const std::string why = bb::PakProblem(importPath); !why.empty()) {
+            bb::LogError("import: %s %s\n", importPath.c_str(), why.c_str());
+            return 1;
+        }
+        std::string error;
+        const std::string landed = bb::ImportPak(importPath, nullptr, error);
+        if (landed.empty()) {
+            bb::LogError("import: %s\n", error.c_str());
+            return 1;
+        }
+        std::printf("%s\n", landed.c_str());
+        return 0;
+    }
+
+    // Which data this run plays, decided before anything is opened.
+    //
+    // A pak named on the command line (or in BB_PAK) is taken at its word and
+    // a bad one is fatal: a script that passed a path wants to be told it was
+    // wrong, not shown a window asking for another. A run that names nothing
+    // searches the usual places, and if the search comes up empty the import
+    // screen asks the player for their copy -- which is the ordinary state of
+    // a build someone has just downloaded, since none ships with data.
+    std::string pakPath;
+    {
+        const char* named = !pakArg.empty() ? pakArg.c_str()
+                                            : std::getenv("BB_PAK");
+        if (named && *named) {
+            if (const std::string why = bb::PakProblem(named); !why.empty()) {
+                bb::LogError("pak: %s %s\n", named, why.c_str());
+                return 1;
+            }
+            pakPath = named;
+        } else {
+            pakPath = bb::FindPak();
+        }
+    }
+
+    // The window comes up before the data does now, because the screen that
+    // asks for the data is drawn in it.
+    bb::SdlHost host;
+    if (!host.Init(scale, winW, winH)) return 1;
+    if (const char* flips = std::getenv("BB_FLIPS"))
+        host.SetFlipLimit(std::atol(flips));
+    // The device frames -- the picture of the phone drawn either side of the
+    // screen -- are looked for the same way the icons are. Missing is fine,
+    // the sides just go black; said out loud all the same, because a frame
+    // nobody can find and a frame nobody installed look identical on screen.
+    //
+    // Looked for before the pak rather than after it: the import screen wears
+    // one too, and the candidates that find anything are anchored on the
+    // binary, not on a pak this run may not have yet.
+    {
+        bool found = false;
+        for (const std::string& c : AssetPaths("frames", "BB_FRAMES", pakPath)) {
+            host.OpenFrames(c);
+            if (host.FrameCount() == 0) continue;
+            bb::LogDebug("frames: %s (%d)\n", c.c_str(), host.FrameCount());
+            found = true;
+            break;
+        }
+        if (!found) bb::LogDebug("frames: none found, sides stay black\n");
+    }
+
+    // BB_SHOT saves whatever was last presented, wherever the run ended --
+    // including the import screen, which is otherwise the one screen in the
+    // port no smoke test could photograph.
+    const auto saveShot = [&host] {
+        if (const char* shot = std::getenv("BB_SHOT")) {
+            std::printf("screenshot: %s (%s)\n", shot,
+                        host.SaveScreenshot(shot) ? "ok" : "failed");
+        }
+    };
+
+    if (pakPath.empty()) {
+        pakPath = bb::RunImportScreen(host);
+        if (pakPath.empty()) {  // they closed the window instead
+            saveShot();
+            return 0;
+        }
+    }
+
     bb::Resources resources;
-    if (!resources.MountPak(argv[1], "/")) {
-        bb::LogError("pak: failed to open %s\n", argv[1]);
+    if (!resources.MountPak(pakPath, "/")) {
+        bb::LogError("pak: failed to open %s\n", pakPath.c_str());
         return 1;
     }
     // Which data this run is playing: the one line worth having in a quiet log,
     // for the same reason the console build stamps its build date.
-    bb::LogInfo("pak: %s\n", argv[1]);
+    bb::LogInfo("pak: %s\n", pakPath.c_str());
     // The soft-key hint icons ship in their own little pak (built by
     // tools/makeicons.py). Missing is fine -- the labels just go without icons.
-    for (const std::string& c : AssetPaths("icons.pak", "BB_ICONS", argv[1])) {
+    for (const std::string& c : AssetPaths("icons.pak", "BB_ICONS", pakPath)) {
         if (!resources.MountPak(c, "/")) continue;
         bb::LogDebug("icons: %s\n", c.c_str());
         break;
@@ -268,42 +375,20 @@ int main(int argc, char** argv) {
     }
     bb::TextureCache textures(pack, palette);
 
-    bb::SdlHost host;
-    if (!host.Init(scale, winW, winH)) return 1;
     // Saved games sit beside the data, which is where a player would look for
-    // them. BB_SAVES moves them, which is what the smoke tests use so a test
-    // run cannot overwrite a real campaign.
+    // them -- and for an imported copy that is the port's own directory, which
+    // is somewhere a player can always write. BB_SAVES moves them, which is
+    // what the smoke tests use so a test run cannot overwrite a real campaign.
     {
         std::string saves;
         if (const char* env = std::getenv("BB_SAVES")) {
             saves = env;
         } else {
-            std::string dir = argv[1];
-            const std::size_t slash = dir.find_last_of("/\\");
-            saves = (slash == std::string::npos ? std::string(".")
-                                                : dir.substr(0, slash)) +
-                    "/saves";
+            saves = DirOf(pakPath) + "/saves";
         }
         host.OpenSaves(saves);
         bb::LogDebug("saves: %s\n", saves.c_str());
     }
-    // The device frames -- the picture of the phone drawn either side of the
-    // screen -- are looked for the same way the icons are. Missing is fine,
-    // the sides just go black; said out loud all the same, because a frame
-    // nobody can find and a frame nobody installed look identical on screen.
-    {
-        bool found = false;
-        for (const std::string& c : AssetPaths("frames", "BB_FRAMES", argv[1])) {
-            host.OpenFrames(c);
-            if (host.FrameCount() == 0) continue;
-            bb::LogDebug("frames: %s (%d)\n", c.c_str(), host.FrameCount());
-            found = true;
-            break;
-        }
-        if (!found) bb::LogDebug("frames: none found, sides stay black\n");
-    }
-    if (const char* flips = std::getenv("BB_FLIPS"))
-        host.SetFlipLimit(std::atol(flips));
     // BB_KEYS="40:select,80:softleft": inject key presses at given flips, so a
     // smoke test can walk through screens no env flag jumps to.
     if (const char* keys = std::getenv("BB_KEYS")) {
@@ -362,9 +447,6 @@ int main(int argc, char** argv) {
             bb::RunGame(ctx, skipIntro);
     }
 
-    if (const char* shot = std::getenv("BB_SHOT")) {
-        std::printf("screenshot: %s (%s)\n", shot,
-                    host.SaveScreenshot(shot) ? "ok" : "failed");
-    }
+    saveShot();
     return 0;
 }

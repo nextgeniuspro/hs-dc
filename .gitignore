@@ -2,12 +2,20 @@
 # your own copy of Blackbeard's data.pak.
 data.pak
 App/
+extracted/
 
 # Build outputs
 build/
 build-dc/
+build-mac/
 build-tidy/
 compile_commands.json
+
+# The universal SDL2 the macOS app bundle links and embeds. Eleven megabytes of
+# somebody else's binary, fetched rather than committed: this repo holds no
+# binaries at all and this is not the one to start with.
+#   scripts/fetch-sdl2-mac.sh
+third_party/mac/
 
 # Python
 __pycache__/

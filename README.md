@@ -56,14 +56,30 @@ you get no `blackbeard` binary — it prints `SDL2 not found: the libraries will
 build, but no app target`, which is the line to look for if the executable isn't
 where you expect it.
 
+### macOS
+
+Download SDL2 framework, execute once
+
 ```sh
-cmake -S . -B build && cmake --build build -j
+scripts/fetch-sdl2-mac.sh
 ```
 
-Run it with the path to the original assets:
+Generate project
 
 ```sh
-./build/blackbeard /path/to/data.pak
+cmake -S . -B build -DBB_MAC_BUNDLE=ON
+```
+
+```sh
+cmake --build build -j
+```
+
+### Windows
+
+Build game with command
+
+```sh
+cmake -S . -B build && cmake --build build -j
 ```
 
 ### Dreamcast

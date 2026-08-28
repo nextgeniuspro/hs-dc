@@ -88,8 +88,18 @@ public:
     // Write the last presented frame as a BMP. Returns false on failure.
     bool SaveScreenshot(const char* path) const;
 
+    // The path of a file dragged onto the window since this was last asked,
+    // or an empty string. *Taken*, not read: a drop is an action, and asking
+    // twice must not perform it twice.
+    //
+    // The only caller is the import screen (platform/ImportScreen.h) -- the
+    // game itself has nothing to do with files the desktop hands it -- which
+    // is why this is on SdlHost rather than on the Host seam the game sees.
+    std::string TakeDroppedFile();
+
 private:
     std::string m_Text;   // characters typed since the last PollText
+    std::string m_Dropped;  // ...and the last file dragged onto the window
     void PumpEvents();
     void ToggleFullscreen();
 

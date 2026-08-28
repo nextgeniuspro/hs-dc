@@ -53,6 +53,22 @@ bool Pak::Open(const std::string& pakPath) {
     }
     const uint32_t dirSize = ReadU32(hdr);
     const uint32_t count = ReadU32(hdr + 4);
+    // The count is bounded before it is multiplied by anything.
+    //
+    // `count * kEntrySize` is done in `std::size_t`, so on a 64-bit host it
+    // cannot wrap and the self-check below already turns away a count near
+    // 2^32. On a 32-bit target -- the Dreamcast -- it can: 0xF0F0F0F1 entries
+    // multiply out to 1, and a header claiming a nine-byte directory would
+    // then size the buffer from the wrapped product and read four billion
+    // entries out of it.
+    //
+    // Worth bounding on both, because "is this file the game's data?" is now a
+    // question asked of whatever a player pointed at (platform/DataFiles.h),
+    // and an answer that depends on the width of a size_t is not one.
+    if (count > (0xFFFFFFFFu - 8) / kEntrySize) {
+        std::fclose(f);
+        return false;
+    }
     if (dirSize != 8 + count * kEntrySize) {
         std::fclose(f);
         return false;  // header self-check failed => not this format

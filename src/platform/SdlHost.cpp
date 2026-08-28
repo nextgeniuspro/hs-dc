@@ -116,6 +116,10 @@ bool SdlHost::Init(int scale, int width, int height) {
     m_Tex = SDL_CreateTexture(m_Ren, SDL_PIXELFORMAT_ARGB8888,
                              SDL_TEXTUREACCESS_STREAMING, Surface::kWidth,
                              Surface::kHeight);
+    // Dropping a file on the window is how a first-run install is given its
+    // copy of the game (platform/ImportScreen.h). SDL leaves the event off on
+    // some backends, so it is asked for rather than assumed.
+    SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
     return m_Tex != nullptr;
 }
 
@@ -246,6 +250,16 @@ void SdlHost::PumpEvents() {
                     if (e.key.keysym.scancode == b.Sc)
                         m_Held[static_cast<int>(b.Mapped)] = false;
                 break;
+            // A file dragged onto the window. SDL allocates the path and
+            // hands over ownership of it; only the most recent is kept,
+            // because a drop of several files is still one answer to the one
+            // question anything here asks.
+            case SDL_DROPFILE:
+                if (e.drop.file) {
+                    m_Dropped = e.drop.file;
+                    SDL_free(e.drop.file);
+                }
+                break;
             case SDL_TEXTINPUT:
                 m_Text += e.text.text;
                 break;
@@ -352,6 +366,12 @@ void SdlHost::FlushKeys() {
 std::string SdlHost::PollText() {
     std::string out;
     out.swap(m_Text);
+    return out;
+}
+
+std::string SdlHost::TakeDroppedFile() {
+    std::string out;
+    out.swap(m_Dropped);
     return out;
 }
 

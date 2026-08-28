@@ -17,4 +17,4 @@
 
 ngage	N-Gage
 ngage-qd	N-Gage QD
-Dreamcast	Dreamcast
+dreamcast	Dreamcast
