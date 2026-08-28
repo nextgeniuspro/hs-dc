@@ -1,4 +1,4 @@
-# High Seize — a port for desktop and Dreamcast
+# High Seize — a port for PC and Sega Dreamcast
 
 Native re-implementation of *High Seize* (RedLynx, N-Gage) for the desktop and the
 Sega Dreamcast. Internal port name: **blackbeard**.
