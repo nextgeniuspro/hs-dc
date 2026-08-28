@@ -50,11 +50,7 @@ cd hs-dc
 
 ### Desktop
 
-Needs CMake 3.16+, a C++20 compiler, zlib and SDL2. Everything but SDL2 is
-mandatory; without SDL2, CMake still configures and the libraries still build, but
-you get no `blackbeard` binary — it prints `SDL2 not found: the libraries will
-build, but no app target`, which is the line to look for if the executable isn't
-where you expect it.
+Needs CMake 3.16+, a C++20 compiler, zlib and SDL2
 
 ### macOS
 
@@ -70,6 +66,7 @@ Generate project
 cmake -S . -B build -DBB_MAC_BUNDLE=ON
 ```
 
+Build it
 ```sh
 cmake --build build -j
 ```
