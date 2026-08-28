@@ -4,11 +4,6 @@
 // use to the one screen that exists *because* the pak is missing. So the port
 // carries a small font of its own, compiled in: five by seven, printable
 // ASCII, no dependencies, available from the first instruction.
-//
-// The console already had an answer to this -- DcMain's Fatal panel draws with
-// the Dreamcast's BIOS font -- and a desktop has nothing of the sort, so this
-// is the desktop's. It is deliberately plain: this is the font that says
-// something has gone wrong, not one the game is ever seen in.
 #pragma once
 
 #include <cstdint>

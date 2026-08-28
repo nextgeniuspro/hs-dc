@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "platform/BootFont.h"
+#include "platform/BootScreen.h"
 #include "platform/DataFiles.h"
 #include "platform/FileDialog.h"
 #include "platform/Host.h"
@@ -16,75 +17,12 @@
 namespace bb {
 namespace {
 
-// ARGB4444, like everything else the port draws. Deliberately not the game's
-// palette: this screen is not the game, and it should not pretend to be one
-// the player has not given us yet.
-constexpr uint16_t kBackground = 0xF012;  // deep sea blue
-constexpr uint16_t kBar = 0xF235;         // the strip along the top
-constexpr uint16_t kRule = 0xF457;        // hairlines
-constexpr uint16_t kInk = 0xFDDE;         // body text
-constexpr uint16_t kDim = 0xF89A;         // labels and paths
-constexpr uint16_t kHeading = 0xFEC5;     // brass
-constexpr uint16_t kBad = 0xFF97;         // something went wrong
-constexpr uint16_t kGood = 0xF7D8;        // the progress bar
-
-// The layout, in the screen's own 176x208. Everything is on a grid of the
-// font's cell so that nothing has to be measured twice.
-constexpr int kBarHeight = 13;
-constexpr int kHeadingY = 22;
-constexpr int kBodyY = 50;
-constexpr int kLineStep = 10;
-constexpr int kMargin = 6;
-// The two keys this screen answers to, anchored down here rather than left to
-// follow the paragraph above them: they are the same two lines wherever the
-// paragraph ends, and a complaint growing by a line should not shift them.
-constexpr int kKeysY = 150;
-constexpr int kFooterY = 190;
-constexpr int kColumns = Surface::kWidth / kBootGlyphW;  // 29
-// ...less the margin either side, which is what a paragraph is laid out in.
-constexpr int kBodyColumns = kColumns - 2 * kMargin / kBootGlyphW;  // 27
-
 // How the last line of a long path is drawn when there is no room for the
 // rest of it: the tail is what tells one candidate from another, so the front
 // is what gets cut.
 std::string Elide(const std::string& text, std::size_t columns) {
     if (text.size() <= columns) return text;
     return "..." + text.substr(text.size() - (columns - 3));
-}
-
-void DrawRule(Surface& screen, int y) {
-    screen.FillRect(kMargin, y, Surface::kWidth - 2 * kMargin, 1, kRule);
-}
-
-// The parts every state of this screen shares: the strip along the top, a
-// heading under it, and the two hints along the bottom.
-void DrawChrome(Surface& screen, const std::string& heading, uint16_t colour) {
-    screen.Fill(kBackground);
-    screen.FillRect(0, 0, Surface::kWidth, kBarHeight, kBar);
-    DrawBootTextCentred(screen, 3, "HS", kDim);
-    DrawBootTextCentred(screen, kHeadingY, heading, colour, 2);
-    DrawRule(screen, kHeadingY + 22);
-}
-
-void DrawHints(Surface& screen, const std::string& left,
-               const std::string& right) {
-    DrawRule(screen, kFooterY - 6);
-    if (!left.empty()) DrawBootText(screen, kMargin, kFooterY, left, kDim);
-    if (!right.empty()) {
-        const int w = BootTextWidth(right) - 1;  // less the trailing gap
-        DrawBootText(screen, Surface::kWidth - kMargin - w, kFooterY, right,
-                     kDim);
-    }
-}
-
-// Wrapped body text from `y` down, one line per cell. Returns the y it ended
-// at, so a caller can carry on underneath.
-int DrawBody(Surface& screen, int y, const std::string& text, uint16_t colour) {
-    for (const std::string& line : WrapBootText(text, kBodyColumns)) {
-        DrawBootText(screen, kMargin, y, line, colour);
-        y += kLineStep;
-    }
-    return y;
 }
 
 }  // namespace
@@ -114,19 +52,16 @@ std::string RunImportScreen(SdlHost& host) {
     bool dropped = false;  // whether BB_DROP has had its one turn
     while (!host.QuitRequested() && imported.empty()) {
         Surface& screen = host.Screen();
-        DrawChrome(screen, "NO GAME DATA", failure.empty() ? kHeading : kBad);
-        const int y = DrawBody(screen, kBodyY, prompt, kInk);
-        if (!failure.empty()) DrawBody(screen, y + kLineStep / 2, failure, kBad);
-        // The two keys, spelled out rather than left to the footer strip: this
-        // is the first screen of a fresh install and the player has not seen
-        // the game's soft-key chrome yet, so it says what to press in words.
-        int keyLine = kKeysY;
-        if (canBrowse) {
-            DrawBootText(screen, kMargin, keyLine, "Press Enter to browse", kInk);
-            keyLine += kLineStep;
-        }
-        keyLine += 2.5 * kLineStep;
-        DrawBootText(screen, kMargin, keyLine, "Press Esc to quit", kInk);
+        DrawBootChrome(screen, "NO GAME DATA",
+                       failure.empty() ? kBootHeading : kBootBad);
+        const int y = DrawBootBody(screen, kBootBodyY, prompt, kBootInk);
+        if (!failure.empty())
+            DrawBootBody(screen, y + kBootLineStep / 2, failure, kBootBad);
+        // The keys, spelled out rather than left to the footer strip: this is
+        // the first screen of a fresh install and the player has not seen the
+        // game's soft-key chrome yet, so it says what to press in words.
+        DrawBootKeys(screen, canBrowse ? "Press Enter to browse" : "",
+                     "Press Esc to quit");
         host.Flip();
         host.Sleep(16);
 
@@ -174,32 +109,34 @@ std::string RunImportScreen(SdlHost& host) {
         // a still window to look like a hung one. The copy calls back with how
         // far it has got and this draws it, which is also what keeps the
         // window answering the desktop while it runs.
-        const std::string source = Elide(resolved, kColumns - 2);
+        const std::string source = Elide(resolved, kBootColumns - 2);
         std::string error;
         imported = ImportPak(
             resolved,
             [&](double fraction) {
                 Surface& busy = host.Screen();
-                DrawChrome(busy, "IMPORTING", kHeading);
-                DrawBody(busy, kBodyY, "Copying your game data.", kInk);
-                DrawBootText(busy, kMargin, kBodyY + 2 * kLineStep, source, kDim);
+                DrawBootChrome(busy, "IMPORTING", kBootHeading);
+                DrawBootBody(busy, kBootBodyY, "Copying your game data.",
+                             kBootInk);
+                DrawBootText(busy, kBootMargin,
+                             kBootBodyY + 2 * kBootLineStep, source, kBootDim);
 
-                const int barX = kMargin;
-                const int barW = Surface::kWidth - 2 * kMargin;
-                const int barY = kBodyY + 5 * kLineStep;
-                busy.FillRect(barX, barY, barW, 9, kRule);
-                busy.FillRect(barX + 1, barY + 1, barW - 2, 7, kBackground);
+                const int barX = kBootMargin;
+                const int barW = Surface::kWidth - 2 * kBootMargin;
+                const int barY = kBootBodyY + 5 * kBootLineStep;
+                busy.FillRect(barX, barY, barW, 9, kBootRule);
+                busy.FillRect(barX + 1, barY + 1, barW - 2, 7, kBootBackground);
                 const int filled =
                     static_cast<int>((barW - 2) * (fraction < 0   ? 0
                                                    : fraction > 1 ? 1
                                                                   : fraction));
-                busy.FillRect(barX + 1, barY + 1, filled, 7, kGood);
+                busy.FillRect(barX + 1, barY + 1, filled, 7, kBootGood);
 
                 char percent[8];
                 std::snprintf(percent, sizeof(percent), "%d%%",
                               static_cast<int>(fraction * 100));
-                DrawBootTextCentred(busy, barY + 16, percent, kDim);
-                DrawHints(busy, "", "Esc  Cancel");
+                DrawBootTextCentred(busy, barY + 16, percent, kBootDim);
+                DrawBootHints(busy, "", "Esc  Cancel");
 
                 host.Flip();
                 host.Sleep(1);

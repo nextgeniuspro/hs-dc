@@ -31,12 +31,3 @@ cmake -S "$repo" -B "$build" \
     "$@"
 
 cmake --build "$build" -j"$jobs"
-
-elf="$build/blackbeard.elf"
-if [ ! -f "$elf" ]; then
-    echo "dc-build: expected $elf, which is not there" >&2
-    exit 1
-fi
-size="$(sh-elf-size "$elf" 2>/dev/null | tail -1 || true)"
-echo "dc-build: $elf"
-[ -n "$size" ] && echo "dc-build: text/data/bss $size"

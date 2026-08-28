@@ -103,16 +103,13 @@ Build the ELF, then turn it and the assets into a bootable image:
 ./scripts/dc-build.sh                # -> build-dc/blackbeard.elf
 ./scripts/dc-cdi.sh                  # -> build-dc/blackbeard.cdi
 ./scripts/dc-cdi.sh --pak /path/to/data.pak   # if it isn't in the repo root
+./scripts/dc-cdi.sh --no-pak         # -> build-dc/blackbeard-sd.cdi
 ```
 
 The image is unpadded (~32 MB) by default, which is what an emulator wants. Pass
 `--pad` for a CD-R: it pads out to the full 700 MB so the game sits at the disc's
 edge, where a real drive reads fastest.
 
-If you have an SD adapter you can use a pre-built `.cdi` from the releases page and
-keep the assets on the card — the binary looks for `/sd/hs/data.pak` and
-`/sd/data.pak` (as well as `/cd/DATA.PAK` on the disc, and `/pc/data.pak` over
-dc-tool).
 
 
 ## The device frame
