@@ -50,6 +50,9 @@
 #include <vector>
 
 #include <SDL.h>
+#if defined(_WIN32)
+#  include <windows.h>
+#endif
 
 #include "game/Boot.h"
 #include "game/Cutscene.h"
@@ -309,6 +312,9 @@ int main(int argc, char** argv) {
 
     // The window comes up before the data does now, because the screen that
     // asks for the data is drawn in it.
+#if defined(_WIN32)
+    ::ShowWindow(::GetConsoleWindow(), SW_HIDE);
+#endif
     bb::SdlHost host;
     if (!host.Init(scale, winW, winH)) return 1;
     if (const char* flips = std::getenv("BB_FLIPS"))

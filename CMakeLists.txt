@@ -33,7 +33,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug)
 endif()
-add_compile_options(-Wall -Wextra -Wno-unused-parameter)
+
+if(MSVC)
+  add_compile_options(/W4 /wd4100)
+else()
+  add_compile_options(-Wall -Wextra -Wno-unused-parameter)
+endif()
 
 if(BB_DREAMCAST)
   add_compile_options(-include ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/DcCompat.h)
@@ -189,7 +194,7 @@ if(NOT BB_DREAMCAST)
     find_package(SDL2 QUIET)
     if(SDL2_FOUND)
       add_library(bb_sdl2 INTERFACE)
-      target_link_libraries(bb_sdl2 INTERFACE SDL2::SDL2)
+      target_link_libraries(bb_sdl2 INTERFACE SDL2::SDL2 SDL2::SDL2main)
       set(BB_HAVE_SDL2 ON)
     endif()
   endif()
@@ -229,8 +234,13 @@ if(BB_HAVE_SDL2)
   
   target_include_directories(blackbeard PRIVATE third_party/stb)
 
-  set_source_files_properties(src/platform/SdlFrames.cpp PROPERTIES
-    COMPILE_OPTIONS -Wno-unused-function)
+  if(MSVC)
+    set_source_files_properties(src/platform/SdlFrames.cpp PROPERTIES
+      COMPILE_OPTIONS "/wd4505")
+  else()
+    set_source_files_properties(src/platform/SdlFrames.cpp PROPERTIES
+      COMPILE_OPTIONS -Wno-unused-function)
+  endif()
   target_link_libraries(blackbeard PRIVATE bb_game bb_platform bb_sdl2)
   message(STATUS "SDL2 found: building 'blackbeard' app target")
 

@@ -76,11 +76,25 @@ cmake --build build -j
 
 ### Windows
 
-Build game with command
+Install required libraries (recommended: using `vcpkg`) and then configure CMake.
 
-```sh
-cmake -S . -B build && cmake --build build -j
+```powershell
+# Clone and bootstrap vcpkg (one-time)
+git clone https://github.com/microsoft/vcpkg.git
+.\vcpkg\bootstrap-vcpkg.bat
+
+# Install dependencies for the x64 triplet
+.\vcpkg\vcpkg.exe install zlib:x64-windows sdl2:x64-windows
+
+# Configure and build the project using the vcpkg toolchain
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+  -DCMAKE_BUILD_TYPE=Release `
+  -DCMAKE_TOOLCHAIN_FILE="./vcpkg/scripts/buildsystems/vcpkg.cmake"
+
+# Build
+cmake --build build --config Release
 ```
+
 
 ### Dreamcast
 
