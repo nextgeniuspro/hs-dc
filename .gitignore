@@ -1,0 +1,17 @@
+# Game data — NEVER commit. This port is clean-room: it requires you to supply
+# your own copy of Blackbeard's data.pak.
+data.pak
+App/
+
+# Build outputs
+build/
+build-dc/
+build-tidy/
+compile_commands.json
+
+# Python
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store

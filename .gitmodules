@@ -1,0 +1,4 @@
+[submodule "third_party/vfspp"]
+	path = third_party/vfspp
+	url = https://github.com/nextgeniuspro/vfspp.git
+	branch = directories_support

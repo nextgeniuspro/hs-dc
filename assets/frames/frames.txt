@@ -1,0 +1,20 @@
+# Device frames — the pictures drawn either side of the game field.
+#
+# The game's screen is 176x208 and a desktop window is not, so the space left
+# over is filled with the device the game shipped on. One line per frame:
+#
+#     <id>  TAB  <label shown in the settings list>
+#
+# and the art is `<id>/left.png` and `<id>/right.png` beside this file -- the
+# directory spelled exactly as the id is, case and all, or the frame goes
+# missing on the filesystems that care and stays put on the ones that do not.
+# Both are drawn at the height of the game field with their aspect kept,
+# butted against its left and right edges, and cropped by the window.
+#
+# The order here is the order the settings list shows, after "Off". The id is
+# what the save file stores, so renaming one loses that player's choice —
+# add a new id instead.
+
+ngage	N-Gage
+ngage-qd	N-Gage QD
+Dreamcast	Dreamcast

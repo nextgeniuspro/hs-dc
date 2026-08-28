@@ -1,0 +1,38 @@
+Checks: '-*,readability-identifier-naming'
+HeaderFilterRegex: '.*/port/(src|tests)/.*'
+CheckOptions:
+  # --- members ------------------------------------------------------------
+  # Private/protected take the m_ prefix; public members (structs, and the
+  # public data of a class) carry none.
+  - key: readability-identifier-naming.PrivateMemberPrefix
+    value: 'm_'
+  - key: readability-identifier-naming.PrivateMemberCase
+    value: CamelCase
+  - key: readability-identifier-naming.ProtectedMemberPrefix
+    value: 'm_'
+  - key: readability-identifier-naming.ProtectedMemberCase
+    value: CamelCase
+  - key: readability-identifier-naming.PublicMemberCase
+    value: CamelCase
+
+  # --- parameters and locals ---------------------------------------------
+  - key: readability-identifier-naming.ParameterCase
+    value: camelBack
+  - key: readability-identifier-naming.LocalVariableCase
+    value: camelBack
+
+  # --- constants: keep the k prefix exactly as it is ----------------------
+  # 'aNy_CasE' is clang-tidy's opt-out; without these the k-names would fall
+  # through to the member/variable rules above and be rewritten.
+  - key: readability-identifier-naming.EnumConstantCase
+    value: aNy_CasE
+  - key: readability-identifier-naming.ConstexprVariableCase
+    value: aNy_CasE
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: aNy_CasE
+  - key: readability-identifier-naming.StaticConstantCase
+    value: aNy_CasE
+  - key: readability-identifier-naming.ClassConstantCase
+    value: aNy_CasE
+  - key: readability-identifier-naming.GlobalVariableCase
+    value: aNy_CasE
